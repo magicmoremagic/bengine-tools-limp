@@ -1,0 +1,6 @@
+_*
+.vscode/
+.vs/
+*.VC.db
+*.VC.opendb
+*.limphash
