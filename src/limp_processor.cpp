@@ -6,6 +6,7 @@
 #include <be/util/fnv.hpp>
 #include <be/util/string_span.hpp>
 #include <be/luacore/modules.hpp>
+#include <be/luacore/lua_helpers.hpp>
 #include <be/luautil/modules.hpp>
 #include <be/luablt/modules.hpp>
 #include <boost/algorithm/string/trim.hpp>
@@ -110,7 +111,7 @@ S get_results(lua::Context& context) {
 
    lua_State* L = context.L();
    lua_pushcfunction(L, lua_get_results);
-   lua::detail::ecall(L, 0, 1);
+   lua::ecall(L, 0, 1);
 
    if (lua_type(L, -1) == LUA_TSTRING) {
       std::size_t len;
@@ -139,7 +140,7 @@ void set_global(lua::Context& context, const char* field, gsl::cstring_span<> va
    lua_pushcfunction(L, lua_set_global);
    lua_pushstring(L, field);
    lua_pushlstring(L, value.data(), value.length());
-   lua::detail::ecall(L, 2, 0);
+   lua::ecall(L, 2, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -148,7 +149,7 @@ void set_global(lua::Context& context, const char* field, lua_Integer value) {
    lua_pushcfunction(L, lua_set_global);
    lua_pushstring(L, field);
    lua_pushinteger(L, value);
-   lua::detail::ecall(L, 2, 0);
+   lua::ecall(L, 2, 0);
 }
 
 } // be::limp::()
@@ -353,6 +354,7 @@ lua::Context LimpProcessor::make_context_() {
    lua::Context context({
       lua::id_module,
       lua::logging_module,
+      lua::interpolate_string_module,
       lua::util_module,
       lua::fs_module,
       lua::fnv256_module,
