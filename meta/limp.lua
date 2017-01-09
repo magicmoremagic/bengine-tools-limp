@@ -26,9 +26,6 @@ local fs = require('be.fs')
 local util = require('be.util')
 local blt = require('blt')
 
-indent_size = 3
-indent_char = ' '
-
 do -- strict.lua
    -- checks uses of undeclared global variables
    -- All global variables must be 'declared' through a regular assignment
@@ -55,7 +52,7 @@ do -- strict.lua
    end
   
    mt.__index = function (t, n)
-      if not mt.__declared[n] and debug.getinfo(2, "S").what ~= "C" then
+      if __STRICT and not mt.__declared[n] and debug.getinfo(2, "S").what ~= "C" then
          error("variable '"..n.."' is not declared", 2)
       end
       return rawget(t, n)
@@ -66,6 +63,14 @@ do -- strict.lua
    end
 
 end
+
+indent_size = 3
+indent_char = ' '
+limprc_path = nil
+prefix = nil
+postfix = nil
+postprocess = nil
+base_indent = nil
 
 do -- indent
    local current_indent = 0
@@ -120,7 +125,7 @@ do -- write
       out = { }
       n = 1
 
-      write_prefix(str)
+      write_prefix()
    end
 
    function nl ()
@@ -178,7 +183,7 @@ do -- write
          init()
       end
       
-      write_postfix(str)
+      write_postfix()
 
       local str = table.concat(out)
       out = nil
