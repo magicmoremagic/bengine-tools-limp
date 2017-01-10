@@ -5,7 +5,6 @@ tool 'limp' {
       link_project {
          'core-id-with-names',
          'cli',
-         'blt',
          'luautil',
          'luablt'
       }
