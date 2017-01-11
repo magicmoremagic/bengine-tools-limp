@@ -356,6 +356,7 @@ lua::Context LimpProcessor::make_context_() {
       lua::logging_module,
       lua::interpolate_string_module,
       lua::util_module,
+      lua::time_module,
       lua::fs_module,
       lua::fnv256_module,
       lua::blt_module,
