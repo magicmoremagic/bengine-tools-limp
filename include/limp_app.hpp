@@ -30,6 +30,7 @@ private:
    void process_(const Path& path);
 
    CoreInitLifecycle init_;
+   CoreLifecycle core_;
    std::unordered_map<S, LanguageConfig> langs_;
    I8 status_ = 0;
    bool recursive_ = false;
