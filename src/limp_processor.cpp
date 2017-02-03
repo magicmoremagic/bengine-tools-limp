@@ -5,10 +5,10 @@
 #include <be/util/files.hpp>
 #include <be/util/fnv.hpp>
 #include <be/util/string_span.hpp>
-#include <be/luacore/modules.hpp>
-#include <be/luacore/lua_helpers.hpp>
-#include <be/luautil/modules.hpp>
-#include <be/luablt/modules.hpp>
+#include <be/belua/lua_helpers.hpp>
+#include <be/core/lua_modules.hpp>
+#include <be/util/lua_modules.hpp>
+#include <be/blt/lua_modules.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <lua/lua.h>
 #include <lua/lualib.h>
@@ -106,12 +106,12 @@ int lua_get_results(lua_State* L) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-S get_results(lua::Context& context) {
+S get_results(belua::Context& context) {
    S result;
 
    lua_State* L = context.L();
    lua_pushcfunction(L, lua_get_results);
-   lua::ecall(L, 0, 1);
+   belua::ecall(L, 0, 1);
 
    if (lua_type(L, -1) == LUA_TSTRING) {
       std::size_t len;
@@ -135,21 +135,21 @@ int lua_set_global(lua_State* L) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void set_global(lua::Context& context, const char* field, gsl::cstring_span<> value) {
+void set_global(belua::Context& context, const char* field, gsl::cstring_span<> value) {
    lua_State* L = context.L();
    lua_pushcfunction(L, lua_set_global);
    lua_pushstring(L, field);
    lua_pushlstring(L, value.data(), value.length());
-   lua::ecall(L, 2, 0);
+   belua::ecall(L, 2, 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void set_global(lua::Context& context, const char* field, lua_Integer value) {
+void set_global(belua::Context& context, const char* field, lua_Integer value) {
    lua_State* L = context.L();
    lua_pushcfunction(L, lua_set_global);
    lua_pushstring(L, field);
    lua_pushinteger(L, value);
-   lua::ecall(L, 2, 0);
+   belua::ecall(L, 2, 0);
 }
 
 } // be::limp::()
@@ -202,7 +202,7 @@ bool LimpProcessor::should_process() {
 bool LimpProcessor::process() {
    bool retval = false; // set to true if we find stuff that needs to be replaced
    I32 limp_comment_number = 1;
-   lua::Context context = make_context_();
+   belua::Context context = make_context_();
    
    std::regex& open_re = get_regex(opener_);
    std::regex& close_re = get_regex(closer_);
@@ -350,18 +350,18 @@ void LimpProcessor::load_() {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-lua::Context LimpProcessor::make_context_() {
-   lua::Context context({
-      lua::id_module,
-      lua::logging_module,
-      lua::interpolate_string_module,
-      lua::util_module,
-      lua::time_module,
-      lua::fs_module,
-      lua::fnv256_module,
-      lua::blt_module,
-      lua::blt_compile_module,
-      lua::blt_debug_module
+belua::Context LimpProcessor::make_context_() {
+   belua::Context context({
+      belua::id_module,
+      belua::logging_module,
+      belua::interpolate_string_module,
+      belua::time_module,
+      belua::util_module,
+      belua::fs_module,
+      belua::fnv256_module,
+      belua::blt_module,
+      belua::blt_compile_module,
+      belua::blt_debug_module
    });
 
    set_global(context, "file_path", path_.string());
@@ -378,7 +378,7 @@ lua::Context LimpProcessor::make_context_() {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void LimpProcessor::prepare_(lua::Context& context, gsl::cstring_span<> old_gen, gsl::cstring_span<> indent) {
+void LimpProcessor::prepare_(belua::Context& context, gsl::cstring_span<> old_gen, gsl::cstring_span<> indent) {
    set_global(context, "last_generated_data", old_gen);
    set_global(context, "base_indent", indent);
 }

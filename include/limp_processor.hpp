@@ -4,14 +4,14 @@
 
 #include "language_config.hpp"
 #include <be/core/filesystem.hpp>
-#include <be/luacore/context.hpp>
+#include <be/belua/context.hpp>
 
 namespace be {
-namespace lua {
+namespace belua {
 
 class Context;
 
-} // be::lua
+} // be::belua
 namespace limp {
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -29,8 +29,8 @@ public:
 
 private:
    void load_();
-   lua::Context make_context_();
-   void prepare_(lua::Context& context, gsl::cstring_span<> old_gen, gsl::cstring_span<> indent);
+   belua::Context make_context_();
+   void prepare_(belua::Context& context, gsl::cstring_span<> old_gen, gsl::cstring_span<> indent);
 
    Path path_;
    Path hash_path_;

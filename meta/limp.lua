@@ -24,7 +24,7 @@ local setmetatable = setmetatable
 
 local fs = require('be.fs')
 local util = require('be.util')
-local blt = require('blt')
+local blt = require('be.blt')
 
 do -- strict.lua
    -- checks uses of undeclared global variables

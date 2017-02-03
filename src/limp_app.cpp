@@ -4,7 +4,7 @@
 #include <be/core/alg.hpp>
 #include <be/util/path_glob.hpp>
 #include <be/cli/cli.hpp>
-#include <be/luacore/lua_exception.hpp>
+#include <be/belua/lua_exception.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -413,12 +413,12 @@ void LimpApp::process_(const Path& path) {
             | default_log();
       }
 
-   } catch (const lua::LuaError& e) {
+   } catch (const belua::LuaError& e) {
       status_ = std::max(status_, (I8)3);
-      lua::lua_error(e, default_log());
-   } catch (const lua::LuaException& e) {
+      belua::lua_error(e, default_log());
+   } catch (const belua::LuaException& e) {
       status_ = std::max(status_, (I8)3);
-      lua::lua_error(e, default_log());
+      belua::lua_error(e, default_log());
    } catch (const Recoverable<>& e) {
       status_ = std::max(status_, (I8)3);
       be_error() << "Exception while processing file!"
