@@ -33,6 +33,7 @@ private:
    CoreLifecycle core_;
    std::unordered_map<S, LanguageConfig> langs_;
    I8 status_ = 0;
+   bool test_ = false;
    bool recursive_ = false;
    bool dry_run_ = false;
    bool stop_on_failure_ = false;
