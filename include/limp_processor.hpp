@@ -17,7 +17,7 @@ namespace limp {
 ///////////////////////////////////////////////////////////////////////////////
 class LimpProcessor final {
 public:
-   LimpProcessor(const Path& path, const LanguageConfig& comment, const LanguageConfig& limp);
+   LimpProcessor(const Path& path, const LanguageConfig& comment, const LanguageConfig& limp, const Path& depfile_path);
 
    bool processable();
    bool should_process();
@@ -34,6 +34,7 @@ private:
 
    Path path_;
    Path hash_path_;
+   Path depfile_path_;
    LanguageConfig comment_;
    LanguageConfig limp_;
    S opener_;

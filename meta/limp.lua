@@ -71,6 +71,7 @@ prefix = nil
 postfix = nil
 postprocess = nil
 base_indent = nil
+root_dir = nil
 
 do -- indent
    local current_indent = 0
@@ -201,7 +202,7 @@ function write_prefix ()
       write(prefix)
    else
       nl()
-      writeln(comment_begin, ' ######## !! GENERATED CODE -- DO NOT MODIFY !! ######## ', comment_end)
+      writeln(comment_begin, ' ################# !! GENERATED CODE -- DO NOT MODIFY !! ################# ', comment_end)
    end
 end
 
@@ -211,7 +212,59 @@ function write_postfix ()
       write(postfix)
    else
       nl()
-      write(comment_begin,   ' ################ END OF GENERATED CODE ################ ', comment_end)
+      write(comment_begin,   ' ######################### END OF GENERATED CODE ######################### ', comment_end)
+   end
+end
+
+do -- dependencies
+   local deps = { }
+
+   function get_depfile_target ()
+      return be.fs.ancestor_relative(file_path, root_dir)
+   end
+
+   function write_depfile ()
+      if not depfile_path or depfile_path == '' then
+         return
+      end
+
+      local depfile = ''
+      local depfile_exists = false
+      if fs.exists(depfile_path) then
+         depfile = fs.get_file_contents(depfile_path)
+         depfile_exists = true
+      end
+
+      do
+         local prefix = get_depfile_target() .. ':'
+         local depfile_line = { prefix }
+         for k, v in pairs(deps) do
+            depfile_line[#depfile_line + 1] = ' '
+            depfile_line[#depfile_line + 1] = k
+         end
+         depfile_line = table.concat(depfile_line)
+
+         local found_existing
+         depfile = depfile:gsub(blt.gsub_escape(prefix) .. '[^\r\n]+', function ()
+            found_existing = true
+            return depfile_line
+         end, 1)
+
+         if not found_existing then
+            depfile = depfile .. depfile_line .. '\n'
+         end
+      end
+
+      if not depfile_exists then
+         fs.create_dirs(fs.parent_path(depfile_path))
+      end
+      fs.put_file_contents(depfile_path, depfile)
+   end
+
+   function dependency (path)
+      if path and path ~= '' then
+         deps[path] = true
+      end
    end
 end
 
@@ -223,6 +276,7 @@ function require_load_file (path, chunk_name)
    if not chunk_name then
       chunk_name = '@' .. fs.path_filename(path)
    end
+   dependency(fs.ancestor_relative(path, root_dir))
    local contents = fs.get_file_contents(path)
    return util.require_load(contents, chunk_name)
 end
@@ -248,7 +302,8 @@ end
 
 function write_file (path)
    if fs.exists(path) then
-     write(indent_newlines(fs.get_file_contents(path)))
+      dependency(fs.ancestor_relative(path, root_dir))
+      write(indent_newlines(fs.get_file_contents(path)))
    end
 end
 
@@ -268,6 +323,7 @@ do -- include
 
       local path = fs.find_file(include_name, table.unpack(include_dirs))
       if path then
+         dependency(fs.ancestor_relative(path, root_dir))
          local contents = fs.get_file_contents(path)
          local fn = util.require_load(contents, '@' .. include_name .. '.lua')
          chunks[include_name] = fn
@@ -276,6 +332,7 @@ do -- include
 
       path = fs.find_file(include_name .. '.lua', table.unpack(include_dirs))
       if path then
+         dependency(fs.ancestor_relative(path, root_dir))
          local contents = fs.get_file_contents(path)
          local fn = util.require_load(contents, '@' .. include_name .. '.lua')
          chunks[include_name] = fn
@@ -304,11 +361,13 @@ function import_limprc (path)
    local p = fs.compose_path(path, '.limprc')
    if fs.exists(p) then
       limprc_path = p
+      root_dir = path
       dofile(p)
       return true
    end
 
    if fs.root_path(path) == path then
+      root_dir = path
       return false
    end
 

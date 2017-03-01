@@ -155,9 +155,10 @@ void set_global(belua::Context& context, const char* field, lua_Integer value) {
 } // be::limp::()
 
 ///////////////////////////////////////////////////////////////////////////////
-LimpProcessor::LimpProcessor(const Path& path, const LanguageConfig& comment, const LanguageConfig& limp)
+LimpProcessor::LimpProcessor(const Path& path, const LanguageConfig& comment, const LanguageConfig& limp, const Path& depfile_path)
    : path_(path),
      hash_path_(path.string() + ".limphash"),
+     depfile_path_(depfile_path),
      comment_(comment),
      limp_(limp),
      opener_(regex_escape(comment.opener + limp.opener)),
@@ -315,6 +316,11 @@ bool LimpProcessor::process() {
    
    processed_content_ = oss.str();
 
+   if (!depfile_path_.empty()) {
+      S write_depfile = "if write_depfile then write_depfile() end";
+      context.execute(write_depfile, "@" + path_.filename().string() + " write depfile");
+   }
+
    return retval;
 }
 
@@ -368,6 +374,7 @@ belua::Context LimpProcessor::make_context_() {
    set_global(context, "file_dir", path_.parent_path().string());
    set_global(context, "file_hash", disk_content_hash_);
    set_global(context, "hash_file_path", hash_path_.string());
+   set_global(context, "depfile_path", depfile_path_.string());
    set_global(context, "file_contents", disk_content_);
    set_global(context, "comment_begin", comment_.opener);
    set_global(context, "comment_end", comment_.closer);
