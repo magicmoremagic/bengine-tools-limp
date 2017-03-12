@@ -325,7 +325,7 @@ do -- include
       if path then
          dependency(fs.ancestor_relative(path, root_dir))
          local contents = fs.get_file_contents(path)
-         local fn = util.require_load(contents, '@' .. include_name .. '.lua')
+         local fn = util.require_load(contents, '@' .. include_name)
          chunks[include_name] = fn
          return fn
       end
@@ -351,7 +351,12 @@ do -- include
       end
       include_dirs[n + 1] = fs.canonical(path)
    end
+
+   function resolve_include_path (path)
+      return fs.resolve_path(path, include_dirs) or fs.resolve_path(path .. '.lua', include_dirs)
+   end
 end
+
 
 function include (include_name, ...)
    return get_include(include_name)(...)
