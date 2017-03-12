@@ -3,4 +3,5 @@ _*
 .vs/
 *.VC.db
 *.VC.opendb
+*.vcxproj.user
 *.limphash
