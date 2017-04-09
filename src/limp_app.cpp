@@ -69,6 +69,7 @@ LimpApp::LimpApp(int argc, char** argv) {
          // TODO --watch
 
          (flag({ "f" },{ "force" }, "Always process files, even if they haven't changed since last being processed.", force_process_))
+         (flag({ "h" },{ "hash" }, "Output the hash of any processed files to a .limphash file so that they can be skipped when unchanged.", write_hashes_))
          (flag({ "n" },{ "dry-run" }, "Makes no changes, but reports which files would be changed if run without this option.", dry_run_))
          (flag({ "b" },{ "break-on-fail" }, "Stops processing additional inputs after the first failure.", stop_on_failure_))
          (flag({ "R" },{ "recursive" }, "Recursively looks in subdirectories for files matching the input filenames.", recursive_))
@@ -408,6 +409,9 @@ void LimpApp::process_(const Path& path) {
                   & hidden(ids::log_attr_path) << path.generic_string()
                   | default_log();
                proc.write();
+               if (write_hashes_) {
+                  proc.write_hash();
+               }
             }
          } else {
             if (dry_run_) {
@@ -415,7 +419,7 @@ void LimpApp::process_(const Path& path) {
                   & hidden(ids::log_attr_path) << path.generic_string()
                   | default_log();
             } else {
-               if (proc.write_hash()) {
+               if (write_hashes_ && proc.write_hash()) {
                   be_short_verbose() << "Hash update: " << color::fg_green << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
                      & hidden(ids::log_attr_path) << path.generic_string()
                      | default_log();

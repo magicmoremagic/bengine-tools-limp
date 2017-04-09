@@ -38,6 +38,7 @@ private:
    bool dry_run_ = false;
    bool stop_on_failure_ = false;
    bool force_process_ = false;
+   bool write_hashes_ = false;
    Path depfile_path_;
    std::vector<Path> search_paths_;
    std::vector<S> jobs_;
