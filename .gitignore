@@ -5,3 +5,4 @@ _*
 *.VC.opendb
 *.vcxproj.user
 *.limphash
+.unversioned-commit

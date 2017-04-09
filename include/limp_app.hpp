@@ -9,11 +9,6 @@
 #include <set>
 #include <vector>
 
-#define BE_LIMP_VERSION_MAJOR 0
-#define BE_LIMP_VERSION_MINOR 1
-#define BE_LIMP_VERSION_REV 1
-#define BE_LIMP_VERSION "LIMP " BE_STRINGIFY(BE_LIMP_VERSION_MAJOR) "." BE_STRINGIFY(BE_LIMP_VERSION_MINOR) "." BE_STRINGIFY(BE_LIMP_VERSION_REV)
-
 namespace be {
 namespace limp {
 
