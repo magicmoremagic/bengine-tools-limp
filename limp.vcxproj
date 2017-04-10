@@ -62,6 +62,7 @@
     <ClInclude Include="include\limp_app.hpp" />
     <ClInclude Include="include\limp_lua.hpp" />
     <ClInclude Include="include\limp_processor.hpp" />
+    <ClInclude Include="include\version.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="meta\limp.lua" />
