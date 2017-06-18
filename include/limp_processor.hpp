@@ -6,13 +6,12 @@
 #include <be/core/filesystem.hpp>
 #include <be/belua/context.hpp>
 
-namespace be {
-namespace belua {
+namespace be::belua {
 
 class Context;
 
 } // be::belua
-namespace limp {
+namespace be::limp {
 
 ///////////////////////////////////////////////////////////////////////////////
 class LimpProcessor final {
@@ -49,6 +48,5 @@ private:
 };
 
 } // be::limp
-} // be
 
 #endif

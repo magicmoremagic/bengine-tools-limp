@@ -4,6 +4,7 @@ tool 'limp' {
       link_project {
          'core-id-with-names',
          'cli',
+         'util-fs',
          'util-lua',
          'blt-lua',
          'core-lua'

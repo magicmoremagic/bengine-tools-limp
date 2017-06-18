@@ -4,8 +4,7 @@
 
 #include <be/core/be.hpp>
 
-namespace be {
-namespace limp {
+namespace be::limp {
 
 struct LanguageConfig {
    S opener;
@@ -13,6 +12,5 @@ struct LanguageConfig {
 };
 
 } // be::limp
-} // be
 
 #endif

@@ -1,7 +1,7 @@
 #include "limp_processor.hpp"
 #include "limp_lua.hpp"
 #include <be/core/logging.hpp>
-#include <be/core/zlib.hpp>
+#include <be/util/zlib.hpp>
 #include <be/util/files.hpp>
 #include <be/util/fnv.hpp>
 #include <be/util/string_span.hpp>
@@ -89,7 +89,7 @@ gsl::string_span<> subspan(const gsl::string_span<>& span, typename gsl::string_
 ///////////////////////////////////////////////////////////////////////////////
 S inflate_limp_core() {
    Buf<const UC> data = make_buf(BE_LIMP_COMPILED_LUA_MODULE, BE_LIMP_COMPILED_LUA_MODULE_LENGTH);
-   return inflate_text(data, BE_LIMP_COMPILED_LUA_MODULE_UNCOMPRESSED_LENGTH);
+   return util::inflate_text(data, BE_LIMP_COMPILED_LUA_MODULE_UNCOMPRESSED_LENGTH);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -190,7 +190,7 @@ bool LimpProcessor::should_process() {
    }
 
    if (fs::exists(hash_path_)) {
-      disk_hash_ = util::get_file_contents_string(hash_path_);
+      disk_hash_ = util::throw_on_error(util::get_file_contents_string(hash_path_));
       boost::trim(disk_hash_);
       disk_content_hash_ = util::fnv256_1a(disk_content_);
       return disk_hash_ != disk_content_hash_;
@@ -349,7 +349,7 @@ bool LimpProcessor::write_hash() {
 ///////////////////////////////////////////////////////////////////////////////
 void LimpProcessor::load_() {
    if (!loaded_) {
-      disk_content_ = util::get_file_contents_string(path_);
+      disk_content_ = util::throw_on_error(util::get_file_contents_string(path_));
       loaded_ = true;
    }
 }
