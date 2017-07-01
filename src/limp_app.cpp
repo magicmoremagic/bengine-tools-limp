@@ -7,7 +7,8 @@
 #include <be/core/alg.hpp>
 #include <be/util/path_glob.hpp>
 #include <be/cli/cli.hpp>
-#include <be/belua/lua_exception.hpp>
+#include <be/belua/lua_error.hpp>
+#include <be/belua/log_error.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -156,20 +157,20 @@ LimpApp::LimpApp(int argc, char** argv) {
          proc.describe(std::cout, ids::cli_describe_section_license);
       }
       
-   } catch (const cli::OptionException& e) {
+   } catch (const cli::OptionError& e) {
       status_ = 2;
       be_error() << S(e.what())
          & attr(ids::log_attr_index) << e.raw_position()
          & attr(ids::log_attr_argument) << S(e.argument())
          & attr(ids::log_attr_option) << S(e.option())
          | default_log();
-   } catch (const cli::ArgumentException& e) {
+   } catch (const cli::ArgumentError& e) {
       status_ = 2;
       be_error() << S(e.what())
          & attr(ids::log_attr_index) << e.raw_position()
          & attr(ids::log_attr_argument) << S(e.argument())
          | default_log();
-   } catch (const Fatal& e) {
+   } catch (const FatalTrace& e) {
       status_ = 2;
       be_error() << "Fatal error while parsing command line!"
          & attr(ids::log_attr_message) << S(e.what())
@@ -201,9 +202,7 @@ int LimpApp::operator()() {
       }
 
       for (const auto& p : search_paths_) {
-         be_short_verbose() << "Search path: " << color::fg_gray << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-            & hidden(ids::log_attr_path) << p.generic_string()
-            | default_log();
+         be_short_verbose() << "Search path: " << color::fg_gray << p.generic_string() | default_log();
       }
 
       for (auto& job : jobs_) {
@@ -217,7 +216,7 @@ int LimpApp::operator()() {
          }
       }
 
-   } catch (const Fatal& e) {
+   } catch (const FatalTrace& e) {
       status_ = std::max(status_, (I8)1);
       be_error() << "Unexpected fatal error!"
          & attr(ids::log_attr_message) << S(e.what())
@@ -298,16 +297,13 @@ void LimpApp::load_langs_() {
    limpconf_path /= ".limpconf";
 
    if (fs::exists(limpconf_path)) {
-      be_short_verbose() << "Loading .limpconf: " << color::fg_gray << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-         & hidden(ids::log_attr_path) << limpconf_path.generic_string()
-         | default_log();
+      be_short_verbose() << "Loading .limpconf: " << color::fg_gray << limpconf_path.generic_string() | default_log();
 
       std::ifstream ifs;
       ifs.exceptions(std::ios_base::goodbit);
       ifs.open(limpconf_path.native());
       if (!ifs) {
-         be_short_warn() << ".limpconf exists, but could not be opened for reading!"
-            | default_log();
+         be_short_warn() << ".limpconf exists, but could not be opened for reading!" | default_log();
          return;
       }
 
@@ -352,9 +348,7 @@ void LimpApp::load_langs_() {
 
 ///////////////////////////////////////////////////////////////////////////////
 void LimpApp::get_paths_(const S& pathspec) {
-   be_short_verbose() << "Expanding input path: " << color::fg_gray << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-      & hidden(ids::log_attr_path) << S(pathspec)
-      | default_log();
+   be_short_verbose() << "Expanding input path: " << color::fg_gray << S(pathspec) | default_log();
 
    util::PathMatchType mode = recursive_ ? util::PathMatchType::recursive_files_and_misc : util::PathMatchType::files_and_misc;
    std::vector<Path> paths = util::glob(pathspec, search_paths_, mode);
@@ -365,13 +359,9 @@ void LimpApp::get_paths_(const S& pathspec) {
       std::tie(std::ignore, inserted) = paths_.insert(absolute);
 
       if (inserted) {
-         be_short_verbose() << "Match: " << color::fg_gray << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-            & hidden(ids::log_attr_path) << absolute.generic_string()
-            | default_log();
+         be_short_verbose() << "Match: " << color::fg_gray << absolute.generic_string() | default_log();
       } else {
-         be_short_verbose() << "Match: " << color::fg_gray << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH) << color::reset << " (already queued)"
-            & hidden(ids::log_attr_path) << absolute.generic_string()
-            | default_log();
+         be_short_verbose() << "Match: " << color::fg_gray << absolute.generic_string() << color::reset << " (already queued)" | default_log();
       }
    }
 }
@@ -381,10 +371,7 @@ void LimpApp::process_(const Path& path) {
    try {
       S lang = path.extension().generic_string().substr(1);
 
-      be_short_verbose() << "Processing " BE_LOG_INTERP(BEIDN_LOG_ATTR_TYPE) " file: " << color::fg_gray << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-         & hidden(ids::log_attr_type) << lang
-         & hidden(ids::log_attr_path) << path.generic_string()
-         | default_log();
+      be_short_verbose() << "Processing " << S(lang) << " file: " << color::fg_gray << path.generic_string() | default_log();
 
       auto it = langs_.find(lang);
       const auto& comment = (it == langs_.end()) ? langs_[""] : it->second;
@@ -405,13 +392,9 @@ void LimpApp::process_(const Path& path) {
 
          if (proc.process()) {
             if (dry_run_) {
-               be_short_info() << "Out of date: " << color::fg_red << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-                  & hidden(ids::log_attr_path) << path.generic_string()
-                  | default_log();
+               be_short_info() << "Out of date: " << color::fg_red << path.generic_string() | default_log();
             } else {
-               be_short_info() << "Rewriting: " << color::fg_yellow << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-                  & hidden(ids::log_attr_path) << path.generic_string()
-                  | default_log();
+               be_short_info() << "Rewriting: " << color::fg_yellow << path.generic_string() | default_log();
                proc.write();
                if (write_hashes_) {
                   proc.write_hash();
@@ -419,52 +402,50 @@ void LimpApp::process_(const Path& path) {
             }
          } else {
             if (dry_run_) {
-               be_short_info() << "Up to date: " << color::fg_green << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-                  & hidden(ids::log_attr_path) << path.generic_string()
-                  | default_log();
+               be_short_info() << "Up to date: " << color::fg_green << path.generic_string() | default_log();
             } else {
                if (write_hashes_ && proc.write_hash()) {
-                  be_short_verbose() << "Hash update: " << color::fg_green << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-                     & hidden(ids::log_attr_path) << path.generic_string()
-                     | default_log();
+                  be_short_verbose() << "Hash update: " << color::fg_green << path.generic_string() | default_log();
                } else {
-                  be_short_verbose() << "Up to date: " << color::fg_green << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-                     & hidden(ids::log_attr_path) << path.generic_string()
-                     | default_log();
+                  be_short_verbose() << "Up to date: " << color::fg_green << path.generic_string() | default_log();
                }
             }
          }
       } else if (dry_run_) {
-         be_short_info() << "Up to date: " << color::fg_green << BE_LOG_INTERP(BEIDN_LOG_ATTR_PATH)
-            & hidden(ids::log_attr_path) << path.generic_string()
-            | default_log();
+         be_short_info() << "Up to date: " << color::fg_green << path.generic_string() | default_log();
       }
 
+   } catch (const belua::LuaTrace& e) {
+      status_ = std::max(status_, (I8)3);
+      belua::log_error(e, default_log());
    } catch (const belua::LuaError& e) {
       status_ = std::max(status_, (I8)3);
-      belua::lua_error(e, default_log());
-   } catch (const belua::LuaException& e) {
-      status_ = std::max(status_, (I8)3);
-      belua::lua_error(e, default_log());
-   } catch (const Recoverable<>& e) {
+      belua::log_error(e, default_log());
+   } catch (const RecoverableTrace& e) {
       status_ = std::max(status_, (I8)3);
       be_error() << "Exception while processing file!"
          & attr(ids::log_attr_message) << S(e.what())
          & attr(ids::log_attr_input_path) << path.generic_string()
          & attr(ids::log_attr_trace) << e.trace()
          | default_log();
-   } catch (const RecoverableException<>& e) {
+   } catch (const RecoverableError& e) {
       status_ = std::max(status_, (I8)3);
       be_error() << "Exception while processing file!"
          & attr(ids::log_attr_message) << S(e.what())
          & attr(ids::log_attr_input_path) << path.generic_string()
          | default_log();
-   } catch (const Fatal& e) {
+   } catch (const FatalTrace& e) {
       status_ = std::max(status_, (I8)3);
       be_error() << "Unexpected fatal error while processing file!"
          & attr(ids::log_attr_message) << S(e.what())
          & attr(ids::log_attr_input_path) << path.generic_string()
          & attr(ids::log_attr_trace) << StackTrace(e.trace())
+         | default_log();
+   } catch (const FatalError& e) {
+      status_ = std::max(status_, (I8)3);
+      be_error() << "Unexpected fatal error while processing file!"
+         & attr(ids::log_attr_message) << S(e.what())
+         & attr(ids::log_attr_input_path) << path.generic_string()
          | default_log();
    } catch (const fs::filesystem_error& e) {
       status_ = std::max(status_, (I8)3);
@@ -472,6 +453,13 @@ void LimpApp::process_(const Path& path) {
          & attr(ids::log_attr_message) << S(e.what())
          & attr(ids::log_attr_code) << std::error_code(e.code())
          & attr(ids::log_attr_path) << e.path1().generic_string()
+         & attr(ids::log_attr_input_path) << path.generic_string()
+         | default_log();
+   } catch (const std::system_error& e) {
+      status_ = std::max(status_, (I8)3);
+      be_error() << "Unexpected exception while processing file!"
+         & attr(ids::log_attr_message) << S(e.what())
+         & attr(ids::log_attr_code) << std::error_code(e.code())
          & attr(ids::log_attr_input_path) << path.generic_string()
          | default_log();
    } catch (const std::exception& e) {
