@@ -7,8 +7,8 @@
 #include <be/core/alg.hpp>
 #include <be/util/path_glob.hpp>
 #include <be/cli/cli.hpp>
-#include <be/belua/lua_error.hpp>
-#include <be/belua/log_error.hpp>
+#include <be/belua/log_exception.hpp>
+#include <be/core/log_exception.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -159,29 +159,26 @@ LimpApp::LimpApp(int argc, char** argv) {
       
    } catch (const cli::OptionError& e) {
       status_ = 2;
-      be_error() << S(e.what())
-         & attr(ids::log_attr_index) << e.raw_position()
-         & attr(ids::log_attr_argument) << S(e.argument())
-         & attr(ids::log_attr_option) << S(e.option())
-         | default_log();
+      cli::log_exception(e, default_log());
    } catch (const cli::ArgumentError& e) {
       status_ = 2;
-      be_error() << S(e.what())
-         & attr(ids::log_attr_index) << e.raw_position()
-         & attr(ids::log_attr_argument) << S(e.argument())
-         | default_log();
+      cli::log_exception(e, default_log());
    } catch (const FatalTrace& e) {
       status_ = 2;
-      be_error() << "Fatal error while parsing command line!"
-         & attr(ids::log_attr_message) << S(e.what())
-         & attr(ids::log_attr_trace) << StackTrace(e.trace())
-         | default_log();
+      log_exception(e, default_log());
+   } catch (const RecoverableTrace& e) {
+      status_ = 2;
+      log_exception(e, default_log());
+   } catch (const fs::filesystem_error& e) {
+      status_ = 2;
+      log_exception(e, default_log());
+   } catch (const std::system_error& e) {
+      status_ = 2;
+      log_exception(e, default_log());
    } catch (const std::exception& e) {
       status_ = 2;
-      be_error() << "Unexpected exception parsing command line!"
-         & attr(ids::log_attr_message) << S(e.what())
-         | default_log();
-   }   
+      log_exception(e, default_log());
+   }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -218,15 +215,19 @@ int LimpApp::operator()() {
 
    } catch (const FatalTrace& e) {
       status_ = std::max(status_, (I8)1);
-      be_error() << "Unexpected fatal error!"
-         & attr(ids::log_attr_message) << S(e.what())
-         & attr(ids::log_attr_trace) << StackTrace(e.trace())
-         | default_log();
+      log_exception(e, default_log());
+   } catch (const RecoverableTrace& e) {
+      status_ = std::max(status_, (I8)1);
+      log_exception(e, default_log());
+   } catch (const fs::filesystem_error& e) {
+      status_ = std::max(status_, (I8)1);
+      log_exception(e, default_log());
+   } catch (const std::system_error& e) {
+      status_ = std::max(status_, (I8)1);
+      log_exception(e, default_log());
    } catch (const std::exception& e) {
       status_ = std::max(status_, (I8)1);
-      be_error() << "Unexpected exception!"
-         & attr(ids::log_attr_message) << S(e.what())
-         | default_log();
+      log_exception(e, default_log());
    }
 
    return status_;
@@ -417,57 +418,25 @@ void LimpApp::process_(const Path& path) {
 
    } catch (const belua::LuaTrace& e) {
       status_ = std::max(status_, (I8)3);
-      belua::log_error(e, default_log());
+      belua::log_exception(e, default_log());
    } catch (const belua::LuaError& e) {
       status_ = std::max(status_, (I8)3);
-      belua::log_error(e, default_log());
-   } catch (const RecoverableTrace& e) {
-      status_ = std::max(status_, (I8)3);
-      be_error() << "Exception while processing file!"
-         & attr(ids::log_attr_message) << S(e.what())
-         & attr(ids::log_attr_input_path) << path.generic_string()
-         & attr(ids::log_attr_trace) << e.trace()
-         | default_log();
-   } catch (const RecoverableError& e) {
-      status_ = std::max(status_, (I8)3);
-      be_error() << "Exception while processing file!"
-         & attr(ids::log_attr_message) << S(e.what())
-         & attr(ids::log_attr_input_path) << path.generic_string()
-         | default_log();
+      belua::log_exception(e, default_log());
    } catch (const FatalTrace& e) {
       status_ = std::max(status_, (I8)3);
-      be_error() << "Unexpected fatal error while processing file!"
-         & attr(ids::log_attr_message) << S(e.what())
-         & attr(ids::log_attr_input_path) << path.generic_string()
-         & attr(ids::log_attr_trace) << StackTrace(e.trace())
-         | default_log();
-   } catch (const FatalError& e) {
+      log_exception(e, default_log());
+   } catch (const RecoverableTrace& e) {
       status_ = std::max(status_, (I8)3);
-      be_error() << "Unexpected fatal error while processing file!"
-         & attr(ids::log_attr_message) << S(e.what())
-         & attr(ids::log_attr_input_path) << path.generic_string()
-         | default_log();
+      log_exception(e, default_log());
    } catch (const fs::filesystem_error& e) {
       status_ = std::max(status_, (I8)3);
-      be_error() << "Filesystem error while processing file!"
-         & attr(ids::log_attr_message) << S(e.what())
-         & attr(ids::log_attr_code) << std::error_code(e.code())
-         & attr(ids::log_attr_path) << e.path1().generic_string()
-         & attr(ids::log_attr_input_path) << path.generic_string()
-         | default_log();
+      log_exception(e, default_log());
    } catch (const std::system_error& e) {
       status_ = std::max(status_, (I8)3);
-      be_error() << "Unexpected exception while processing file!"
-         & attr(ids::log_attr_message) << S(e.what())
-         & attr(ids::log_attr_code) << std::error_code(e.code())
-         & attr(ids::log_attr_input_path) << path.generic_string()
-         | default_log();
+      log_exception(e, default_log());
    } catch (const std::exception& e) {
       status_ = std::max(status_, (I8)3);
-      be_error() << "Unexpected exception while processing file!"
-         & attr(ids::log_attr_message) << S(e.what())
-         & attr(ids::log_attr_input_path) << path.generic_string()
-         | default_log();
+      log_exception(e, default_log());
    }
 }
 
