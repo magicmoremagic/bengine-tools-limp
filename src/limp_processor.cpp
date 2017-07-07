@@ -89,8 +89,12 @@ gsl::string_span<> subspan(const gsl::string_span<>& span, typename gsl::string_
 
 ///////////////////////////////////////////////////////////////////////////////
 S inflate_limp_core() {
+#ifdef BE_LIMP_COMPILED_LUA_MODULE_UNCOMPRESSED_LENGTH
    Buf<const UC> data = make_buf(BE_LIMP_COMPILED_LUA_MODULE, BE_LIMP_COMPILED_LUA_MODULE_LENGTH);
    return util::inflate_string(data, BE_LIMP_COMPILED_LUA_MODULE_UNCOMPRESSED_LENGTH);
+#else
+   return S(BE_LIMP_COMPILED_LUA_MODULE, BE_LIMP_COMPILED_LUA_MODULE_LENGTH);
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
