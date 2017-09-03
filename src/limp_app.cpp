@@ -29,6 +29,7 @@ LimpApp::LimpApp(int argc, char** argv) {
 
       bool show_version = false;
       bool show_help = false;
+      bool verbose = false;
       S help_query;
 
       proc
@@ -53,8 +54,8 @@ LimpApp::LimpApp(int argc, char** argv) {
                    "'#' are ignored.  Otherwise, each line must have exactly 3 tokens separated by whitespace.  The first is the "
                    "file extension for which the line applies (without the leading '.').  The second token is a sequence of "
                    "characters that denotes the start of a comment, and the last is one that end a comment.  If the same "
-                   "extension is specified multiple times, only the last one is valid.  If a line is specified for the extension"
-                   "'limp', it overrides the default '!!' tokens that indicate the start and end of Lua code.").verbose())
+                   "extension is specified multiple times, only the last one is valid.  If a line is specified for the extension "
+                   "'!!', it overrides the default '!!' tokens that indicate the start and end of Lua code.").verbose())
 
          (summary ("Note: LIMP does not do any Lua syntax parsing when looking for the LIMP and/or comment end tokens.  In "
                    "particular '!!' will be found even if it is inside a Lua string literal.").verbose())
@@ -118,10 +119,7 @@ LimpApp::LimpApp(int argc, char** argv) {
               .extra(Cell() << nl << "If " << fg_cyan << "OPTION" << reset
                             << " is provided, the options list will be filtered to show only options that contain that string."))
 
-         (flag ({ },{ "help" },
-            [&]() {
-               proc.verbose(true);
-            }).ignore_values(true))
+         (flag ({ },{ "help" }, verbose).ignore_values(true))
                
          (exit_code (0, "There were no errors."))
          (exit_code (1, "An unknown error occurred."))
@@ -129,7 +127,7 @@ LimpApp::LimpApp(int argc, char** argv) {
          (exit_code (3, "There was a problem processing an input file."))
          ;
 
-      proc(argc, argv);
+      proc.process(argc, argv);
 
       if (test_) {
          return;
@@ -151,10 +149,10 @@ LimpApp::LimpApp(int argc, char** argv) {
       }
       
       if (show_help) {
-         proc.describe(std::cout, help_query);
+         proc.describe(std::cout, verbose, help_query);
       } else if (show_version) {
-         proc.describe(std::cout, ids::cli_describe_section_prologue);
-         proc.describe(std::cout, ids::cli_describe_section_license);
+         proc.describe(std::cout, verbose, ids::cli_describe_section_prologue);
+         proc.describe(std::cout, verbose, ids::cli_describe_section_license);
       }
       
    } catch (const cli::OptionError& e) {
@@ -286,7 +284,7 @@ void LimpApp::init_default_langs_() {
       cfg.closer = "--";
    }
    {
-      LanguageConfig& cfg = langs_["limp"];
+      LanguageConfig& cfg = langs_["!!"];
       cfg.opener = "!!";
       cfg.closer = "!!";
    }
@@ -376,7 +374,7 @@ void LimpApp::process_(const Path& path) {
 
       auto it = langs_.find(lang);
       const auto& comment = (it == langs_.end()) ? langs_[""] : it->second;
-      const auto& limp = langs_["limp"];
+      const auto& limp = langs_["!!"];
       LimpProcessor proc(path, comment, limp, depfile_path_);
 
       if (!proc.processable()) {

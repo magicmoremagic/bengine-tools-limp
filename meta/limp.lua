@@ -99,10 +99,12 @@ do -- indent
    end
 
    function indent (count)
+      if count == nil then count = 1 end
       current_indent = current_indent + count
    end
 
    function unindent (count)
+      if count == nil then count = 1 end
       current_indent = current_indent - count
    end
 
