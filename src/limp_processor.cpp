@@ -171,7 +171,7 @@ LimpProcessor::LimpProcessor(const Path& path, const LanguageConfig& comment, co
      loaded_(false),
      processable_calculated_(false),
      processable_(false) {
-   
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -209,12 +209,12 @@ bool LimpProcessor::process() {
    bool retval = false; // set to true if we find stuff that needs to be replaced
    I32 limp_comment_number = 1;
    belua::Context context = make_context_();
-   
+
    std::regex& open_re = get_regex(opener_);
    std::regex& close_re = get_regex(closer_);
    std::regex& comment_close_re = get_regex(regex_escape(comment_.closer));
    std::regex& lf_re = get_regex("\\r\\n?|\\n");
-   
+
    Match m;
    std::ostringstream oss;
    gsl::string_span<> remaining = disk_content_;
@@ -318,7 +318,7 @@ bool LimpProcessor::process() {
       }
    }
    oss << remaining;
-   
+
    processed_content_ = oss.str();
 
    if (!depfile_path_.empty()) {

@@ -106,7 +106,7 @@ LimpApp::LimpApp(int argc, char** argv) {
          (end_of_options ())
 
          (verbosity_param ({ "v" },{ "verbosity" }, "LEVEL", default_log().verbosity_mask()))
-         
+
          (flag ({ "V" },{ "version" }, show_version).desc("Prints version information to standard output."))
 
          (param ({ "?" },{ "help" }, "OPTION",
@@ -120,7 +120,7 @@ LimpApp::LimpApp(int argc, char** argv) {
                             << " is provided, the options list will be filtered to show only options that contain that string."))
 
          (flag ({ },{ "help" }, verbose).ignore_values(true))
-               
+
          (exit_code (0, "There were no errors."))
          (exit_code (1, "An unknown error occurred."))
          (exit_code (2, "There was a problem parsing the command line arguments."))
@@ -147,14 +147,14 @@ LimpApp::LimpApp(int argc, char** argv) {
             (license (BE_COPYRIGHT).query())
             ;
       }
-      
+
       if (show_help) {
          proc.describe(std::cout, verbose, help_query);
       } else if (show_version) {
          proc.describe(std::cout, verbose, ids::cli_describe_section_prologue);
          proc.describe(std::cout, verbose, ids::cli_describe_section_license);
       }
-      
+
    } catch (const cli::OptionError& e) {
       status_ = 2;
       cli::log_exception(e, default_log());
