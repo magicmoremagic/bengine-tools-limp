@@ -69,9 +69,16 @@ indent_char = ' '
 limprc_path = nil
 prefix = nil
 postfix = nil
-postprocess = nil
 base_indent = nil
 root_dir = nil
+
+function trim_trailing_ws (str)
+   return str:gsub('[ \t]+(\r?\n)', '%1'):gsub('[ \t]+$', '')
+end
+
+function postprocess (str)
+   return trim_trailing_ws(str)
+end
 
 do -- indent
    local current_indent = 0
