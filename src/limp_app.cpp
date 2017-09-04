@@ -157,25 +157,25 @@ LimpApp::LimpApp(int argc, char** argv) {
 
    } catch (const cli::OptionError& e) {
       status_ = 2;
-      cli::log_exception(e, default_log());
+      log_exception(e);
    } catch (const cli::ArgumentError& e) {
       status_ = 2;
-      cli::log_exception(e, default_log());
+      log_exception(e);
    } catch (const FatalTrace& e) {
       status_ = 2;
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const RecoverableTrace& e) {
       status_ = 2;
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const fs::filesystem_error& e) {
       status_ = 2;
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const std::system_error& e) {
       status_ = 2;
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const std::exception& e) {
       status_ = 2;
-      log_exception(e, default_log());
+      log_exception(e);
    }
 }
 
@@ -213,19 +213,19 @@ int LimpApp::operator()() {
 
    } catch (const FatalTrace& e) {
       status_ = std::max(status_, (I8)1);
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const RecoverableTrace& e) {
       status_ = std::max(status_, (I8)1);
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const fs::filesystem_error& e) {
       status_ = std::max(status_, (I8)1);
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const std::system_error& e) {
       status_ = std::max(status_, (I8)1);
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const std::exception& e) {
       status_ = std::max(status_, (I8)1);
-      log_exception(e, default_log());
+      log_exception(e);
    }
 
    return status_;
@@ -416,25 +416,25 @@ void LimpApp::process_(const Path& path) {
 
    } catch (const belua::LuaTrace& e) {
       status_ = std::max(status_, (I8)3);
-      belua::log_exception(e, default_log());
+      log_exception(e);
    } catch (const belua::LuaError& e) {
       status_ = std::max(status_, (I8)3);
-      belua::log_exception(e, default_log());
+      log_exception(e);
    } catch (const FatalTrace& e) {
       status_ = std::max(status_, (I8)3);
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const RecoverableTrace& e) {
       status_ = std::max(status_, (I8)3);
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const fs::filesystem_error& e) {
       status_ = std::max(status_, (I8)3);
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const std::system_error& e) {
       status_ = std::max(status_, (I8)3);
-      log_exception(e, default_log());
+      log_exception(e);
    } catch (const std::exception& e) {
       status_ = std::max(status_, (I8)3);
-      log_exception(e, default_log());
+      log_exception(e);
    }
 }
 
