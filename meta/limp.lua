@@ -290,6 +290,14 @@ function require_load_file (path, chunk_name)
    return util.require_load(contents, chunk_name)
 end
 
+function get_file_contents (path)
+   if not fs.exists(path) then
+      error('Path \'' .. path .. '\' does not exist!')
+   end
+   dependency(fs.ancestor_relative(path, root_dir))
+   return fs.get_file_contents(path)
+end
+
 get_template = blt.get_template
 register_template_dir = blt.register_template_dir
 register_template_file = blt.register_template_file
@@ -314,6 +322,13 @@ function write_file (path)
       dependency(fs.ancestor_relative(path, root_dir))
       write(indent_newlines(fs.get_file_contents(path)))
    end
+end
+
+-- Passes through the output from from a child process's stdout to the generated code.  stderr is not redirected.
+function write_proc (command)
+   local f = io.popen(command, 'r')
+   write(indent_newlines(f:read('a')))
+   f:close()
 end
 
 do -- include
