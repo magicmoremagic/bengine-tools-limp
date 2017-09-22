@@ -6,6 +6,7 @@ tool 'limp' {
          'cli',
          'util-fs',
          'util-lua',
+         'util-string',
          'blt-lua',
          'core-lua'
       }

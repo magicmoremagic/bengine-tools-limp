@@ -42,15 +42,20 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='debug|x64'">
-    <ClCompile />
     <ClCompile>
       <PreprocessorDefinitions>BE_ID_NAMES_ENABLED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>core-id-with-names-debug.lib;core-debug.lib;zlib-static-debug.lib;cli-debug.lib;ctable-debug.lib;util-debug.lib;util-fs-debug.lib;util-compression-debug.lib;util-prng-debug.lib;util-lua-debug.lib;belua-debug.lib;luaxx-debug.lib;util-string-debug.lib;blt-lua-debug.lib;blt-debug.lib;core-lua-debug.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='release|x64'">
     <ClCompile>
       <PreprocessorDefinitions>BE_ID_NAMES_ENABLED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>core-id-with-names.lib;core.lib;zlib-static.lib;cli.lib;ctable.lib;util.lib;util-fs.lib;util-compression.lib;util-prng.lib;util-lua.lib;belua.lib;luaxx.lib;util-string.lib;blt-lua.lib;blt.lib;core-lua.lib;Dbghelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\limp.cpp" />
