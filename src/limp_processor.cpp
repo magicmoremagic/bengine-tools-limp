@@ -5,7 +5,7 @@
 #include <be/util/get_file_contents.hpp>
 #include <be/util/put_file_contents.hpp>
 #include <be/util/fnv.hpp>
-#include <be/util/string_span.hpp>
+#include <be/util/line_endings.hpp>
 #include <be/belua/lua_helpers.hpp>
 #include <be/core/lua_modules.hpp>
 #include <be/util/lua_modules.hpp>
@@ -14,78 +14,10 @@
 #include <lua/lua.h>
 #include <lua/lualib.h>
 #include <lua/lauxlib.h>
-#include <regex>
 #include <sstream>
 
-namespace be {
-namespace limp {
+namespace be::limp {
 namespace {
-
-using Match = std::match_results<typename gsl::string_span<>::iterator>;
-using Submatch = std::sub_match<typename gsl::string_span<>::iterator>;
-
-///////////////////////////////////////////////////////////////////////////////
-S regex_escape(const S& re) {
-   std::ostringstream oss;
-   for (char c : re) {
-      switch (c) {
-         case '-':
-         case '[':
-         case ']':
-         case '\\':
-         case '{':
-         case '}':
-         case '(':
-         case ')':
-         case '*':
-         case '+':
-         case '?':
-         case '.':
-         case ',':
-         case '/':
-         case '^':
-         case '$':
-         case '|':
-         case '#':
-         case ' ':
-            oss << '\\' << c;
-            break;
-         case '\t':
-            oss << "\\t";
-            break;
-         case '\r':
-            oss << "\\r";
-            break;
-         case '\n':
-            oss << "\\n";
-            break;
-         default:
-            oss << c;
-            break;
-      }
-   }
-   return oss.str();
-}
-
-///////////////////////////////////////////////////////////////////////////////
-std::regex& get_regex(const S& re) {
-   thread_local std::unordered_map<S, std::regex> map;
-   auto it = map.find(re);
-   if (it == map.end()) {
-      std::tie(it, std::ignore) = map.emplace(re, std::regex(re));
-   }
-   return it->second;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-gsl::string_span<> subspan(const gsl::string_span<>& span, const Submatch& submatch) {
-   return span.subspan(submatch.first - span.begin(), submatch.second - submatch.first);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-gsl::string_span<> subspan(const gsl::string_span<>& span, typename gsl::string_span<>::iterator first, typename gsl::string_span<>::iterator last) {
-   return span.subspan(first - span.begin(), last - first);
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 S inflate_limp_core() {
@@ -98,7 +30,7 @@ S inflate_limp_core() {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-const S& get_limp_core() {
+SV get_limp_core() {
    static S limp_core = inflate_limp_core();
    return limp_core;
 }
@@ -112,49 +44,27 @@ int lua_get_results(lua_State* L) {
 
 ///////////////////////////////////////////////////////////////////////////////
 S get_results(belua::Context& context) {
-   S result;
+   SV result;
 
    lua_State* L = context.L();
    lua_pushcfunction(L, lua_get_results);
    belua::ecall(L, 0, 1);
-
-   if (lua_type(L, -1) == LUA_TSTRING) {
-      std::size_t len;
-      const char* ptr = lua_tolstring(L, -1, &len);
-      if (ptr) {
-         result.assign(ptr, len);
-      }
-   }
-
-   return result;
+   SV raw = belua::get_string_view(L, -1, SV());
+   return util::normalize_newlines_copy(raw);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-int lua_set_global(lua_State* L) {
-   lua_pushvalue(L, LUA_REGISTRYINDEX);
-   lua_rawgeti(L, -1, LUA_RIDX_GLOBALS);
-   lua_pushvalue(L, 1); // copy key
-   lua_pushvalue(L, 2); // copy value
-   lua_rawset(L, -3); // insert slot
-   return 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-void set_global(belua::Context& context, const char* field, gsl::cstring_span<> value) {
+void set_global(belua::Context& context, const char* field, SV value) {
    lua_State* L = context.L();
-   lua_pushcfunction(L, lua_set_global);
-   lua_pushstring(L, field);
-   lua_pushlstring(L, value.data(), value.length());
-   belua::ecall(L, 2, 0);
+   belua::push_string(L, value);
+   lua_setglobal(L, field);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void set_global(belua::Context& context, const char* field, lua_Integer value) {
    lua_State* L = context.L();
-   lua_pushcfunction(L, lua_set_global);
-   lua_pushstring(L, field);
    lua_pushinteger(L, value);
-   belua::ecall(L, 2, 0);
+   lua_setglobal(L, field);
 }
 
 } // be::limp::()
@@ -166,23 +76,18 @@ LimpProcessor::LimpProcessor(const Path& path, const LanguageConfig& comment, co
      depfile_path_(depfile_path),
      comment_(comment),
      limp_(limp),
-     opener_(regex_escape(comment.opener + limp.opener)),
-     closer_("(" + regex_escape(limp.closer) + ")|(" + regex_escape(comment.closer) + ")"),
      loaded_(false),
      processable_calculated_(false),
-     processable_(false) {
-
-}
+     processable_(false) { }
 
 ///////////////////////////////////////////////////////////////////////////////
 bool LimpProcessor::processable() {
    load_();
    if (!processable_calculated_) {
-      std::regex& re = get_regex(opener_);
-      if (std::regex_search(disk_content_, re)) {
+      S search_str = comment_.opener + limp_.opener;
+      if (S::npos != disk_content_.find(search_str)) {
          processable_ = true;
       }
-
       processable_calculated_ = true;
    }
    return processable_;
@@ -206,132 +111,134 @@ bool LimpProcessor::should_process() {
 
 ///////////////////////////////////////////////////////////////////////////////
 bool LimpProcessor::process() {
-   bool retval = false; // set to true if we find stuff that needs to be replaced
+   using namespace std::literals::string_view_literals;
+
+   bool modified_file = false; // set to true if we find stuff that needs to be replaced
+
    I32 limp_comment_number = 1;
    belua::Context context = make_context_();
 
-   std::regex& open_re = get_regex(opener_);
-   std::regex& close_re = get_regex(closer_);
-   std::regex& comment_close_re = get_regex(regex_escape(comment_.closer));
-   std::regex& lf_re = get_regex("\\r\\n?|\\n");
-
-   Match m;
+   SV remaining = disk_content_;
+   S opener = comment_.opener + limp_.opener;
    std::ostringstream oss;
-   gsl::string_span<> remaining = disk_content_;
-   while (std::regex_search(remaining.begin(), remaining.end(), m, open_re)) {
-      auto prefix = subspan(remaining, m.prefix());
-      std::size_t indent_size = 0;
-      for (auto rit = prefix.rbegin(), rend = prefix.rend(); rit != rend; ++rit) {
-         char c = *rit;
-         if (c == '\n' || c == '\r') {
-            break;
-         }
-         ++indent_size;
-      }
-      gsl::string_span<> indent = prefix.subspan(prefix.size() - indent_size, indent_size);
 
-      oss << prefix;
-      oss << subspan(remaining, m[0]);
-      remaining = subspan(remaining, m.suffix());
+   const char limp_closer_initial_char = limp_.closer.front();
+   const char comment_closer_initial_char = comment_.closer.front();
 
-      if (std::regex_search(remaining.begin(), remaining.end(), m, close_re)) {
-         gsl::string_span<> lua = subspan(remaining, m.prefix());
-         gsl::string_span<> old_gen;
-         if (m[1].matched) {
-            // found end of limp before end of comment
-            gsl::string_span<> temp = subspan(remaining, m.suffix());
-            if (std::regex_search(temp.begin(), temp.end(), m, comment_close_re)) {
-               // found end of comment
-               std::istringstream iss(S(m.prefix().first, m.prefix().second));
-               std::size_t lines;
-               iss >> lines;
-               if (iss) {
-                  // parsed # of generated lines
-                  S temp2;
-                  iss >> temp2;
-                  if (temp2.empty()) {
-                     // no other non-ws before end of comment
-                     old_gen = subspan(temp, m.suffix());
-                     temp = old_gen;
-                     while (lines > 0) {
-                        if (std::regex_search(temp.begin(), temp.end(), m, lf_re)) {
-                           temp = subspan(temp, m.suffix());
-                           --lines;
-                        } else {
-                           break;
-                        }
-                     }
-                     remaining = temp;
-                     // remove remaining from end of old_gen
-                     old_gen = old_gen.subspan(0, old_gen.size() - remaining.size());
-                  } else {
-                     be_notice() << "Stopping processing early!"
-                        & attr(ids::log_attr_message) << "Unexpected data found after generated line count!"
-                        & attr(ids::log_attr_input_path) << path_.generic_string()
-                        | default_log();
-                     break;
-                  }
-               } else {
-                  be_notice() << "Stopping processing early!"
-                     & attr(ids::log_attr_message) << "Could not parse generated line count!"
-                     & attr(ids::log_attr_input_path) << path_.generic_string()
-                     | default_log();
-                  break;
-               }
-            } else {
-               // reached end of file: print warning, don't process this comment
-               be_notice() << "Stopping processing early!"
-                  & attr(ids::log_attr_message) << "Unclosed LIMP comment!"
-                  & attr(ids::log_attr_input_path) << path_.generic_string()
-                  | default_log();
-               break;
-            }
-         } else {
-            // found end of comment; no existing generated code
-            remaining = subspan(remaining, m.suffix());
-         }
-
-         prepare_(context, old_gen, indent);
-         context.execute(lua, "@" + path_.filename().string() + " LIMP " + std::to_string(limp_comment_number));
-         ++limp_comment_number;
-
-         S new_gen = get_results(context);
-         new_gen.append(1, '\n');
-         //new_gen.append(indent.begin(), indent.end());
-
-         new_gen = std::regex_replace(new_gen, lf_re, preferred_line_ending());
-
-         std::size_t n_lines = std::count(new_gen.begin(), new_gen.end(), '\n');
-
-         if (old_gen != gsl::string_span<>(new_gen)) {
-            retval = true;
-         }
-
-         oss << lua << limp_.closer << ' ' << n_lines << ' ' << comment_.closer << new_gen;
-      } else {
-         // reached end of file: print warning, don't process this comment
-         be_notice() << "Stopping processing early!"
-            & attr(ids::log_attr_message) << "Unclosed LIMP comment!"
-            & attr(ids::log_attr_input_path) << path_.generic_string()
-            | default_log();
+   for (;;) {
+      auto opener_begin = remaining.find(opener);
+      if (opener_begin == SV::npos) {
          break;
       }
+
+      // Found a limp!
+      SV prefix = remaining.substr(0, opener_begin);
+      oss << prefix;
+      oss << opener;
+      remaining.remove_prefix(opener_begin + opener.size());
+
+      // determine indent string for each generated line
+      SV indent = prefix;
+      std::size_t prev_nl = prefix.rfind('\n'); // not checking for \r because we should have opened the file in text mode
+      if (prev_nl != SV::npos) {
+         indent.remove_prefix(prev_nl);
+      }
+
+      // find limp program and number of previously generated lines, followed by comment closer, and remove it from remaining
+      std::size_t lines = 0;
+      SV program = remaining;
+      for (auto it = remaining.begin(), end = remaining.end(); it != end; ++it) {
+         char c = *it;
+         if (c == limp_closer_initial_char) {
+            if (limp_.closer == remaining.substr(it - remaining.begin(), limp_.closer.size())) {
+               // found limp closer, check line count
+               program.remove_suffix(end - it);
+               remaining.remove_prefix((it - remaining.begin()) + limp_.closer.size());
+
+               SV linespec = remaining;
+
+               auto comment_close_begin = remaining.find(comment_.closer);
+               if (comment_close_begin == SV::npos) {
+                  // no comment closer
+                  remaining = SV();
+               } else {
+                  linespec.remove_suffix(linespec.size() - comment_close_begin);
+                  remaining.remove_prefix(comment_close_begin + comment_.closer.size());
+               }
+
+               std::istringstream iss = std::istringstream(S(linespec));
+               iss >> lines;
+               break;
+            }
+         }
+         if (c == comment_closer_initial_char) {
+            if (comment_.closer == remaining.substr(it - remaining.begin(), comment_.closer.size())) {
+               // found comment closer, no line count
+               program.remove_suffix(end - it);
+               remaining.remove_prefix((it - remaining.begin()) + comment_.closer.size());
+               break;
+            }
+         }
+      }
+
+      // capture next `lines` lines from remaining into old_gen
+      SV old_gen;
+      if (lines > 0) {
+         std::size_t old_gen_end = 0;
+         while (lines > 0) {
+            old_gen_end = remaining.find('\n', old_gen_end);
+            if (old_gen_end == SV::npos) {
+               break;
+            }
+            --lines;
+            ++old_gen_end;
+         }
+         old_gen = remaining.substr(0, old_gen_end);
+         remaining.remove_prefix(old_gen.size());
+         if (!old_gen.empty() && old_gen.back() == '\n') {
+            old_gen.remove_suffix(1);
+         }
+      }
+
+      prepare_(context, old_gen, indent);
+
+      S limp_name;
+      const S limp_path = path_.filename().string();
+      const S limp_number_str = std::to_string(limp_comment_number);
+      limp_name.reserve(7 + limp_path.size() + limp_number_str.size());
+      limp_name.append(1, '@');
+      limp_name.append(limp_path);
+      limp_name.append(" LIMP "sv);
+      limp_name.append(limp_number_str);
+
+      context.execute(program, limp_name);
+      ++limp_comment_number;
+
+      S new_gen = get_results(context);
+      lines = 1 + std::count(new_gen.begin(), new_gen.end(), '\n');
+
+      oss << program << limp_.closer << ' ' << lines << ' ' << comment_.closer << new_gen << '\n';
+      
+      if (old_gen != new_gen) {
+         modified_file = true;
+      }
    }
+
    oss << remaining;
 
    processed_content_ = oss.str();
 
    if (!depfile_path_.empty()) {
-      S write_depfile = "if write_depfile then write_depfile() end";
+      SV write_depfile = "if write_depfile then write_depfile() end"sv;
       context.execute(write_depfile, "@" + path_.filename().string() + " write depfile");
    }
 
-   return retval;
+   return modified_file;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void LimpProcessor::write() {
-   util::put_file_contents(path_, processed_content_);
+   util::put_text_file_contents(path_, processed_content_);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -345,7 +252,7 @@ void LimpProcessor::clear_hash() {
 bool LimpProcessor::write_hash() {
    S processed_content_hash = util::fnv256_1a(processed_content_);
    if (processed_content_hash != disk_hash_) {
-      util::put_file_contents(hash_path_, processed_content_hash);
+      util::put_text_file_contents(hash_path_, processed_content_hash);
       return true;
    }
    return false;
@@ -354,7 +261,7 @@ bool LimpProcessor::write_hash() {
 ///////////////////////////////////////////////////////////////////////////////
 void LimpProcessor::load_() {
    if (!loaded_) {
-      disk_content_ = util::get_file_contents_string(path_);
+      disk_content_ = util::get_text_file_contents_string(path_);
       loaded_ = true;
    }
 }
@@ -389,10 +296,9 @@ belua::Context LimpProcessor::make_context_() {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-void LimpProcessor::prepare_(belua::Context& context, gsl::cstring_span<> old_gen, gsl::cstring_span<> indent) {
+void LimpProcessor::prepare_(belua::Context& context, SV old_gen, SV indent) {
    set_global(context, "last_generated_data", old_gen);
    set_global(context, "base_indent", indent);
 }
 
 } // be::limp
-} // be

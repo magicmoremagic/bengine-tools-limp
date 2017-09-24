@@ -64,12 +64,14 @@ do -- strict.lua
 
 end
 
+last_generated_data = nil
+base_indent = nil
+
 indent_size = 3
 indent_char = ' '
 limprc_path = nil
 prefix = nil
 postfix = nil
-base_indent = nil
 root_dir = nil
 
 function trim_trailing_ws (str)

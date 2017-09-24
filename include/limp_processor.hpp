@@ -29,15 +29,13 @@ public:
 private:
    void load_();
    belua::Context make_context_();
-   void prepare_(belua::Context& context, gsl::cstring_span<> old_gen, gsl::cstring_span<> indent);
+   void prepare_(belua::Context& context, SV old_gen, SV indent);
 
    Path path_;
    Path hash_path_;
    Path depfile_path_;
    LanguageConfig comment_;
    LanguageConfig limp_;
-   S opener_;
-   S closer_;
    S disk_hash_;
    S disk_content_hash_;
    S disk_content_;
