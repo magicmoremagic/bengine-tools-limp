@@ -141,7 +141,7 @@ bool LimpProcessor::process() {
       SV indent = prefix;
       std::size_t prev_nl = prefix.rfind('\n'); // not checking for \r because we should have opened the file in text mode
       if (prev_nl != SV::npos) {
-         indent.remove_prefix(prev_nl);
+         indent.remove_prefix(prev_nl + 1);
       }
 
       // find limp program and number of previously generated lines, followed by comment closer, and remove it from remaining
