@@ -3,6 +3,7 @@
 #include "version.hpp"
 #include <be/core/logging.hpp>
 #include <be/core/version.hpp>
+#include <be/util/version.hpp>
 #include <be/blt/version.hpp>
 #include <be/core/alg.hpp>
 #include <be/util/path_glob.hpp>
@@ -141,10 +142,14 @@ LimpApp::LimpApp(int argc, char** argv) {
 
       if (show_version) {
          proc
-            (prologue (BE_LIMP_VERSION_STRING).query())
+            (prologue(BE_LIMP_VERSION_STRING).query())
             (prologue(BE_BLT_VERSION_STRING).query())
+            (prologue(BE_UTIL_VERSION_STRING).query())
+            (prologue(BE_CORE_VERSION_STRING).query())
+            (prologue(LUA_RELEASE).query())
             (license (BE_LICENSE).query())
             (license (BE_COPYRIGHT).query())
+            (license (LUA_COPYRIGHT).query())
             ;
       }
 
