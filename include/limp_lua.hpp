@@ -2,6 +2,8 @@
 #ifndef BE_LIMP_LIMP_LUA_HPP_
 #define BE_LIMP_LIMP_LUA_HPP_
 
+//#bgl stop
+
 /*!! include('common/binary_lua_module', {
    fn = require_load_file(be.fs.canonical('../meta/limp.lua'), '@LIMP core'),
    deflate = true,
